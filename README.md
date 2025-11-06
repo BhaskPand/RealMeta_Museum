@@ -1,6 +1,6 @@
-# ScanArt — Museum Painting Scanner (MVP)
+# RealMeta — Museum Painting Scanner (MVP)
 
-ScanArt is a no-login, camera-based museum painting scanner. Point your phone at a painting, capture, and get instant information. Works offline for demos, supports anonymous analytics with consent, and includes a simple guided tour queue.
+RealMeta is a no-login, camera-based museum painting scanner. Point your phone at a painting, capture, and get instant information. Works offline for demos, supports anonymous analytics with consent, and includes a simple guided tour queue.
 
 Main page link : https://realmeta-museum.onrender.com
 Admin page link : https://realmeta-museum.onrender.com/admin

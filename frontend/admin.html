@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard — ScanArt</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    .admin-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .admin-form { background: var(--card); border: 1px solid #1b2a3d; border-radius: 14px; padding: 20px; margin-bottom: 20px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 14px; }
+    .form-group input, .form-group textarea { width: 100%; padding: 10px; background: #0b1220; border: 1px solid #1b2a3d; border-radius: 8px; color: var(--text); font-size: 14px; box-sizing: border-box; }
+    .form-group input:focus, .form-group textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(58,160,255,.2); }
+    #adminPassword { width: 100%; padding: 12px; background: #0b1220; border: 1px solid #1b2a3d; border-radius: 8px; color: var(--text); font-size: 14px; box-sizing: border-box; }
+    #adminPassword:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(58,160,255,.2); }
+    .form-group textarea { min-height: 80px; resize: vertical; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .artwork-list { display: grid; gap: 16px; }
+    .artwork-item { background: var(--card); border: 1px solid #1b2a3d; border-radius: 12px; padding: 16px; display: flex; justify-content: space-between; align-items: start; }
+    .artwork-info h3 { margin: 0 0 8px 0; }
+    .artwork-info p { margin: 4px 0; color: var(--muted); font-size: 14px; }
+    .artwork-actions { display: flex; gap: 8px; }
+    .btn-small { padding: 6px 12px; font-size: 13px; }
+    .login-form { max-width: 400px; margin: 100px auto; position: relative; z-index: 1000; }
+    .login-form .card { position: relative; z-index: 1001; }
+    .login-form input { position: relative; z-index: 1002; pointer-events: auto !important; }
+    .status-msg { padding: 12px; border-radius: 8px; margin-bottom: 16px; background: rgba(58,160,255,.1); border: 1px solid var(--accent); color: var(--accent); }
+    .status-msg.error { background: rgba(255,90,95,.1); border-color: var(--danger); color: var(--danger); }
+    .status-msg.success { background: rgba(34,197,94,.1); border-color: var(--ok); color: var(--ok); }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div id="loginScreen" class="admin-container login-form">
+    <div class="card">
+      <h2>Admin Login</h2>
+      <div id="loginError" class="status-msg error hidden"></div>
+      <div class="form-group">
+        <label for="adminPassword">Password</label>
+        <input type="password" id="adminPassword" name="password" placeholder="Enter admin password" autocomplete="current-password" autofocus style="width: 100%; padding: 12px; background: #0b1220; border: 1px solid #1b2a3d; border-radius: 8px; color: #e6edf3; font-size: 14px; box-sizing: border-box;" />
+      </div>
+      <button class="btn primary" onclick="handleLogin()" type="button">Login</button>
+    </div>
+  </div>
+
+  <div id="dashboardScreen" class="admin-container hidden">
+    <div class="admin-header">
+      <h1>Admin Dashboard</h1>
+      <div>
+        <a href="/" class="btn secondary">← Back to Site</a>
+        <button class="btn danger" onclick="handleLogout()">Logout</button>
+      </div>
+    </div>
+
+    <div id="statusMsg" class="status-msg hidden"></div>
+
+    <div class="admin-form">
+      <h2 id="formTitle">Add New Artwork</h2>
+      <form id="artworkForm" onsubmit="handleSubmit(event)">
+        <input type="hidden" id="artworkId" />
+        <div class="form-row">
+          <div class="form-group">
+            <label>Artwork ID *</label>
+            <input type="text" id="artworkIdInput" required pattern="[A-Z0-9]+" placeholder="e.g., A08" />
+          </div>
+          <div class="form-group">
+            <label>Year *</label>
+            <input type="text" id="year" required placeholder="e.g., 1889" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Title *</label>
+          <input type="text" id="title" required placeholder="Artwork title" />
+        </div>
+        <div class="form-group">
+          <label>Artist *</label>
+          <input type="text" id="artist" required placeholder="Artist name" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Type</label>
+            <input type="text" id="type" placeholder="e.g., Impressionism" />
+          </div>
+          <div class="form-group">
+            <label>Medium</label>
+            <input type="text" id="medium" placeholder="e.g., Oil on canvas" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Dimensions</label>
+          <input type="text" id="dimensions" placeholder="e.g., 73.7 cm × 92.1 cm" />
+        </div>
+        <div class="form-group">
+          <label>Short Description</label>
+          <textarea id="description_short" placeholder="Brief description"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Long Description</label>
+          <textarea id="description_long" placeholder="Detailed description"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Image File Name *</label>
+          <input type="text" id="image" required placeholder="e.g., A08.jpg" />
+        </div>
+        <div class="form-group">
+          <label>Audio URL (optional)</label>
+          <input type="text" id="audio_url" placeholder="/static/audio/A08.mp3" />
+        </div>
+        <div class="form-group">
+          <label>Tour Group</label>
+          <input type="text" id="tour_group" placeholder="e.g., Impressionism-Highlights" />
+        </div>
+        <div class="form-group">
+          <label>Related Artwork IDs (comma-separated)</label>
+          <input type="text" id="related" placeholder="e.g., A01,A02" />
+        </div>
+        <div class="form-group">
+          <label>Upload Image File</label>
+          <input type="file" id="imageFile" accept="image/*" />
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn primary" id="submitBtn">Add Artwork</button>
+          <button type="button" class="btn secondary" onclick="resetForm()" id="cancelBtn" style="display:none;">Cancel</button>
+        </div>
+      </form>
+    </div>
+
+    <div>
+      <h2>Existing Artworks</h2>
+      <div id="artworkList" class="artwork-list"></div>
+    </div>
+  </div>
+
+  <script>
+    let authToken = null;
+
+    function showStatus(msg, type = 'info') {
+      const el = document.getElementById('statusMsg');
+      el.textContent = msg;
+      el.className = `status-msg ${type}`;
+      el.classList.remove('hidden');
+      setTimeout(() => el.classList.add('hidden'), 5000);
+    }
+
+    function checkAuth() {
+      authToken = sessionStorage.getItem('admin_token');
+      if (authToken) {
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('dashboardScreen').classList.remove('hidden');
+        loadArtworks();
+      }
+    }
+
+    async function handleLogin() {
+      const password = document.getElementById('adminPassword').value;
+      try {
+        const res = await fetch('/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password })
+        });
+        const data = await res.json();
+        if (res.ok && data.token) {
+          authToken = data.token;
+          sessionStorage.setItem('admin_token', authToken);
+          checkAuth();
+        } else {
+          document.getElementById('loginError').textContent = data.error || 'Invalid password';
+          document.getElementById('loginError').classList.remove('hidden');
+        }
+      } catch (e) {
+        document.getElementById('loginError').textContent = 'Login failed';
+        document.getElementById('loginError').classList.remove('hidden');
+      }
+    }
+
+    function handleLogout() {
+      sessionStorage.removeItem('admin_token');
+      authToken = null;
+      document.getElementById('loginScreen').classList.remove('hidden');
+      document.getElementById('dashboardScreen').classList.add('hidden');
+      document.getElementById('adminPassword').value = '';
+    }
+
+    async function loadArtworks() {
+      try {
+        const res = await fetch('/admin/artworks', {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        if (!res.ok) throw new Error('Failed to load');
+        const data = await res.json();
+        renderArtworks(data.artworks || {});
+      } catch (e) {
+        showStatus('Failed to load artworks', 'error');
+      }
+    }
+
+    function renderArtworks(artworks) {
+      const list = document.getElementById('artworkList');
+      list.innerHTML = '';
+      Object.entries(artworks).forEach(([id, art]) => {
+        const div = document.createElement('div');
+        div.className = 'artwork-item';
+        div.innerHTML = `
+          <div class="artwork-info">
+            <h3>${art.title || id}</h3>
+            <p><strong>Artist:</strong> ${art.artist || '—'}</p>
+            <p><strong>Year:</strong> ${art.year || '—'}</p>
+            <p><strong>Image:</strong> ${art.image || '—'}</p>
+          </div>
+          <div class="artwork-actions">
+            <button class="btn btn-small" onclick="editArtwork('${id}')">Edit</button>
+            <button class="btn btn-small danger" onclick="deleteArtwork('${id}')">Delete</button>
+          </div>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    function editArtwork(id) {
+      fetch(`/admin/artworks/${id}`, {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.artwork) {
+          const a = data.artwork;
+          document.getElementById('artworkId').value = id;
+          document.getElementById('artworkIdInput').value = a.id || id;
+          document.getElementById('artworkIdInput').disabled = true;
+          document.getElementById('title').value = a.title || '';
+          document.getElementById('artist').value = a.artist || '';
+          document.getElementById('year').value = a.year || '';
+          document.getElementById('type').value = a.type || '';
+          document.getElementById('medium').value = a.medium || '';
+          document.getElementById('dimensions').value = a.dimensions || '';
+          document.getElementById('description_short').value = a.description_short || '';
+          document.getElementById('description_long').value = a.description_long || '';
+          document.getElementById('image').value = a.image || '';
+          document.getElementById('audio_url').value = a.audio_url || '';
+          document.getElementById('tour_group').value = a.tour_group || '';
+          document.getElementById('related').value = (a.related || []).join(',');
+          document.getElementById('formTitle').textContent = 'Edit Artwork';
+          document.getElementById('submitBtn').textContent = 'Update Artwork';
+          document.getElementById('cancelBtn').style.display = 'inline-block';
+          document.getElementById('artworkForm').scrollIntoView({ behavior: 'smooth' });
+        }
+      })
+      .catch(e => showStatus('Failed to load artwork', 'error'));
+    }
+
+    function resetForm() {
+      document.getElementById('artworkForm').reset();
+      document.getElementById('artworkId').value = '';
+      document.getElementById('artworkIdInput').disabled = false;
+      document.getElementById('formTitle').textContent = 'Add New Artwork';
+      document.getElementById('submitBtn').textContent = 'Add Artwork';
+      document.getElementById('cancelBtn').style.display = 'none';
+    }
+
+    async function handleSubmit(e) {
+      e.preventDefault();
+      const formData = new FormData();
+      const id = document.getElementById('artworkId').value;
+      const artworkId = document.getElementById('artworkIdInput').value;
+      
+      const artwork = {
+        id: artworkId,
+        title: document.getElementById('title').value,
+        artist: document.getElementById('artist').value,
+        year: document.getElementById('year').value,
+        type: document.getElementById('type').value || null,
+        medium: document.getElementById('medium').value || null,
+        dimensions: document.getElementById('dimensions').value || null,
+        description_short: document.getElementById('description_short').value || null,
+        description_long: document.getElementById('description_long').value || null,
+        image: document.getElementById('image').value,
+        audio_url: document.getElementById('audio_url').value || null,
+        video_url: null,
+        tour_group: document.getElementById('tour_group').value || null,
+        related: document.getElementById('related').value ? document.getElementById('related').value.split(',').map(s => s.trim()) : []
+      };
+
+      const imageFile = document.getElementById('imageFile').files[0];
+      
+      try {
+        let res;
+        if (id) {
+          // Update
+          res = await fetch(`/admin/artworks/${id}`, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${authToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(artwork)
+          });
+        } else {
+          // Create
+          res = await fetch('/admin/artworks', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${authToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(artwork)
+          });
+        }
+        
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed');
+        
+        // Upload image if provided
+        if (imageFile) {
+          const imgForm = new FormData();
+          imgForm.append('file', imageFile);
+          const imgRes = await fetch(`/admin/artworks/${artworkId}/image`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${authToken}` },
+            body: imgForm
+          });
+          if (!imgRes.ok) {
+            showStatus('Artwork saved but image upload failed', 'error');
+          }
+        }
+        
+        showStatus(id ? 'Artwork updated successfully' : 'Artwork added successfully', 'success');
+        resetForm();
+        loadArtworks();
+        
+        // Trigger precompute
+        fetch('/precompute', { method: 'POST' }).catch(() => {});
+      } catch (e) {
+        showStatus(e.message || 'Failed to save artwork', 'error');
+      }
+    }
+
+    async function deleteArtwork(id) {
+      if (!confirm(`Delete artwork ${id}?`)) return;
+      try {
+        const res = await fetch(`/admin/artworks/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        if (!res.ok) throw new Error('Failed');
+        showStatus('Artwork deleted', 'success');
+        loadArtworks();
+        fetch('/precompute', { method: 'POST' }).catch(() => {});
+      } catch (e) {
+        showStatus('Failed to delete', 'error');
+      }
+    }
+
+    // Enter key on password field
+    document.getElementById('adminPassword')?.addEventListener('keypress', e => {
+      if (e.key === 'Enter') handleLogin();
+    });
+
+    checkAuth();
+  </script>
+</body>
+</html>
+

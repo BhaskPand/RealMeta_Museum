@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Artwork Details — ScanArt</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>ScanArt</h1>
+    <a href="/" class="btn secondary">← Back</a>
+  </header>
+
+  <main>
+    <div id="artworkContent" class="card result-card">
+      <div id="loading">Loading artwork details…</div>
+      <div id="artworkDetails" class="hidden">
+        <div class="header">
+          <div>
+            <h2 id="artTitle">—</h2>
+            <p id="artMeta">—</p>
+          </div>
+        </div>
+        <img id="artImage" alt="Artwork" class="preview" />
+        <div class="details" style="margin: 16px 0; padding: 12px; background: rgba(27, 42, 61, 0.3); border-radius: 8px;">
+          <p style="margin: 8px 0;"><strong>Type:</strong> <span id="artType">—</span></p>
+          <p style="margin: 8px 0;"><strong>Medium:</strong> <span id="artMedium">—</span></p>
+          <p style="margin: 8px 0;"><strong>Dimensions:</strong> <span id="artDimensions">—</span></p>
+          <p style="margin: 8px 0;"><strong>Year:</strong> <span id="artYear">—</span></p>
+        </div>
+        <p id="artDescription" style="line-height: 1.6; margin: 16px 0;"></p>
+        <div class="actions">
+          <button id="playAudioBtn" class="btn primary">Play Audio</button>
+          <button id="addToTourBtn" class="btn">Add to Tour</button>
+        </div>
+      </div>
+      <div id="error" class="hidden">
+        <p>Artwork not found.</p>
+        <a href="/" class="btn primary">Go Home</a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    'use strict';
+
+    // Analytics tracking (same utilities as main.js)
+    function uuid() {
+      return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+        (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+      );
+    }
+
+    function getSessionId() {
+      let sid = localStorage.getItem('scanart_session_id');
+      if (!sid) {
+        sid = `sess-${uuid()}`;
+        localStorage.setItem('scanart_session_id', sid);
+      }
+      return sid;
+    }
+
+    function getAnalyticsConsent() {
+      return localStorage.getItem('scanart_consent') === 'yes';
+    }
+
+    async function recordEvent(evt) {
+      if (!getAnalyticsConsent()) return;
+      const sessionId = getSessionId();
+      const payload = {
+        event_type: evt.event_type,
+        session_id: sessionId,
+        artwork_id: evt.artwork_id ?? null,
+        timestamp: new Date().toISOString(),
+        ...(evt.duration_seconds != null ? { duration_seconds: evt.duration_seconds } : {})
+      };
+      try {
+        const q = JSON.parse(localStorage.getItem('scanart_events') || '[]');
+        q.push(payload);
+        localStorage.setItem('scanart_events', JSON.stringify(q));
+        if (navigator.onLine) {
+          try {
+            await fetch('/analytics', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            const stored = JSON.parse(localStorage.getItem('scanart_events') || '[]');
+            localStorage.setItem('scanart_events', JSON.stringify(stored.filter(e => e.id !== payload.id)));
+          } catch {}
+        }
+      } catch (e) {}
+    }
+
+    // Extract artwork ID from URL (handles both /artwork/<id> and /artwork-page/<id>)
+    const pathParts = window.location.pathname.split('/').filter(p => p);
+    let artworkId = pathParts[pathParts.length - 1];
+    
+    // Validate artwork ID
+    if (!artworkId || artworkId === 'artwork-page' || artworkId === 'artwork') {
+      console.error('Could not extract artwork ID from URL:', window.location.pathname);
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('error').classList.remove('hidden');
+      artworkId = null;
+    }
+
+    // Track page view start
+    let pageViewStart = Date.now();
+    if (artworkId) {
+      recordEvent({ event_type: 'artwork_page_view', artwork_id: artworkId });
+    }
+
+    // Track page view duration on unload
+    window.addEventListener('beforeunload', async () => {
+      if (artworkId) {
+        const dur = Math.round((Date.now() - pageViewStart) / 1000);
+        if (dur > 0) {
+          await recordEvent({ 
+            event_type: 'artwork_page_duration', 
+            artwork_id: artworkId,
+            duration_seconds: dur 
+          });
+        }
+      }
+    });
+
+    // Load artwork data
+    async function loadArtwork() {
+      if (!artworkId) return;
+      
+      try {
+        const res = await fetch(`/artwork/${artworkId}`);
+        if (!res.ok) throw new Error('Not found');
+        const data = await res.json();
+        
+        document.getElementById('artTitle').textContent = data.title;
+        document.getElementById('artMeta').textContent = `${data.artist} • ${data.year}`;
+        document.getElementById('artType').textContent = data.type || '—';
+        document.getElementById('artMedium').textContent = data.medium || '—';
+        document.getElementById('artDimensions').textContent = data.dimensions || '—';
+        document.getElementById('artYear').textContent = data.year || '—';
+        document.getElementById('artDescription').textContent = data.description_long || data.description_short || '—';
+        
+        // Show image
+        if (data.image) {
+          const img = document.getElementById('artImage');
+          img.src = `/images/${data.image}`;
+          img.alt = data.title;
+        }
+
+        // Audio
+        if (data.audio_url) {
+          document.getElementById('playAudioBtn').onclick = () => {
+            const a = new Audio(data.audio_url);
+            a.play();
+            recordEvent({ event_type: 'play_audio', artwork_id: artworkId });
+          };
+        } else {
+          document.getElementById('playAudioBtn').onclick = () => {
+            const utter = new SpeechSynthesisUtterance(`${data.title}. ${data.description_short || ''}`);
+            window.speechSynthesis.speak(utter);
+          };
+        }
+
+        // Add to tour
+        document.getElementById('addToTourBtn').onclick = () => {
+          const t = JSON.parse(localStorage.getItem('scanart_tour') || '[]');
+          if (!t.includes(artworkId)) {
+            t.push(artworkId);
+            localStorage.setItem('scanart_tour', JSON.stringify(t));
+            recordEvent({ event_type: 'add_to_tour', artwork_id: artworkId });
+          }
+        };
+
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('artworkDetails').classList.remove('hidden');
+      } catch (e) {
+        console.error('Failed to load artwork:', e);
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('error').classList.remove('hidden');
+      }
+    }
+
+    if (artworkId) {
+      loadArtwork();
+    }
+  </script>
+</body>
+</html>
+

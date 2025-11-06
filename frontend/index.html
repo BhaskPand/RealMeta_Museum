@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ScanArt — Museum Painting Scanner</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>ScanArt</h1>
+    <button id="testModeBtn" class="btn secondary">Test Mode</button>
+  </header>
+
+  <main>
+    <section class="camera-card card" aria-label="Camera">
+      <video id="video" autoplay playsinline></video>
+      <div class="controls">
+        <button id="captureBtn" class="btn primary">Capture</button>
+        <span id="statusMsg" role="status" aria-live="polite"></span>
+      </div>
+      <canvas id="canvas" class="hidden" aria-hidden="true"></canvas>
+    </section>
+
+    <section id="resultSection" class="result-card card hidden" aria-live="polite">
+      <div id="resultHeader" class="header">
+        <div>
+          <h2 id="artTitle">—</h2>
+          <p id="artMeta">—</p>
+        </div>
+        <span id="confidenceBadge" class="badge">—</span>
+      </div>
+      <p id="artShort">—</p>
+      <div id="palette" class="palette"></div>
+      <div class="metrics">
+        <span>Texture: <strong id="textureVal">—</strong></span>
+        <span>Distance: <strong id="distanceVal">—</strong></span>
+        <span id="viewTimeContainer" class="hidden">Viewing: <strong id="viewTime">0s</strong></span>
+      </div>
+      <div class="actions">
+        <button id="playAudioBtn" class="btn">Play Audio</button>
+        <button id="addToTourBtn" class="btn">Add to Tour</button>
+        <a id="viewMoreLink" class="btn link" href="#" target="_blank" rel="noopener">View More</a>
+      </div>
+      <img id="lastPreview" alt="Last captured preview" class="preview hidden" />
+    </section>
+
+    <section class="tour-panel" aria-label="Guided Tour">
+      <h3>Tour Queue</h3>
+      <ol id="tourList"></ol>
+      <div class="controls">
+        <button id="tourNextBtn" class="btn secondary" type="button">Next</button>
+        <button id="tourClearBtn" class="btn danger" type="button">Clear</button>
+      </div>
+    </section>
+  </main>
+
+  <div id="consentModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="consentTitle">
+    <div class="modal-content">
+      <h2 id="consentTitle">Privacy & Consent</h2>
+      <p>
+        We use anonymous analytics (no personal data) to improve the demo.
+        You can opt out. A random session ID is stored locally.
+      </p>
+      <div class="modal-actions">
+        <button id="consentAccept" class="btn primary">Accept</button>
+        <button id="consentDecline" class="btn secondary">Opt-out</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/main.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
+
+

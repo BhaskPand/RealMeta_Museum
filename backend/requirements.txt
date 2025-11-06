@@ -1,0 +1,8 @@
+flask
+pillow
+imagehash
+scikit-learn
+numpy
+opencv-python
+flask-cors
+

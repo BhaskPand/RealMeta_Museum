@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual env
+venv/
+.env
+.venv/
+env/
+ENV/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Logs
+*.log
+backend/analytics_log.json
+
+# Embeddings (regenerated on deploy)
+backend/embeddings.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Deployment
+*.zip
+*.tar.gz
+
+# Environment variables
+.env.local
+.env.production
+
+
